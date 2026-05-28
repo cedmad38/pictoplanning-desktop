@@ -3,6 +3,9 @@ name: Build Windows
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-win:
     runs-on: windows-latest
@@ -17,14 +20,9 @@ jobs:
         run: npm install
 
       - name: Build Windows installer
-        run: npm run build && npx electron-builder --win --x64
+        run: npm run build && npx electron-builder --win --x64 --publish never
+
+      - name: Upload exe to GitHub Release
+        run: gh release upload v1.0.0 "release\PictoPlanning Setup 1.0.0.exe" --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload to release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v1.0.0
-          files: release/*.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
