@@ -1,0 +1,76 @@
+{
+  "name": "pictoplanning-desktop",
+  "version": "1.0.0",
+  "description": "PictoPlanning By Cedmad — Logiciel PC de planning visuel par pictogrammes",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "npm run build && electron .",
+    "dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && ELECTRON_DEV=true electron .\"",
+    "build": "vite build",
+    "dist": "npm run build && electron-builder",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "concurrently": "^8.2.2",
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3",
+    "vite": "^5.4.0",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.cedmad.pictoplanning",
+    "productName": "PictoPlanning",
+    "copyright": "By Cedmad",
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "category": "public.app-category.education",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "assets/icon.icns"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": [
+        "fr_FR",
+        "en_US"
+      ],
+      "language": "1036"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Education"
+    }
+  }
+}
