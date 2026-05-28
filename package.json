@@ -36,15 +36,11 @@
     },
     "mac": {
       "category": "public.app-category.education",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "universal"
-          ]
-        }
-      ],
-      "icon": "assets/icon.icns"
+      "target": [{ "target": "dmg", "arch": ["universal"] }],
+      "icon": "assets/icon.icns",
+      "notarize": {
+        "teamId": "Z4SN2WPF27"
+      }
     },
     "win": {
       "target": "nsis"
