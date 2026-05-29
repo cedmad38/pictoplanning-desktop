@@ -38,9 +38,9 @@
       "category": "public.app-category.education",
       "target": [{ "target": "dmg", "arch": ["universal"] }],
       "icon": "assets/icon.icns",
-      "notarize": {
-        "teamId": "Z4SN2WPF27"
-      }
+      "hardenedRuntime": true,
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist"
     },
     "win": {
       "target": "nsis"

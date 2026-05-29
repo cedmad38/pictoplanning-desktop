@@ -9,7 +9,7 @@ permissions:
 jobs:
   build-mac:
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -28,6 +28,10 @@ jobs:
           security unlock-keychain -p "" build.keychain
           security import /tmp/cert.p12 -k build.keychain -P "$CSC_KEY_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+          # Télécharger le certificat intermédiaire Apple WWDR
+          curl -s https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer -o /tmp/DeveloperIDG2CA.cer
+          security import /tmp/DeveloperIDG2CA.cer -k build.keychain -T /usr/bin/codesign
+          security find-identity -v -p codesigning build.keychain
 
       - name: Install dependencies
         run: npm install
@@ -52,7 +56,7 @@ jobs:
             --password "$APPLE_APP_SPECIFIC_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
             --wait \
-            --timeout 20m
+            --timeout 30m
           xcrun stapler staple "$DMG"
           echo "Notarisation terminée ✓"
 
