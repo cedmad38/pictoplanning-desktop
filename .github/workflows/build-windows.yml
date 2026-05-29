@@ -23,6 +23,6 @@ jobs:
         run: npm run build && npx electron-builder --win --x64 --publish never
 
       - name: Upload exe to GitHub Release
-        run: gh release upload v1.0.0 "release\PictoPlanning Setup 1.0.0.exe" --clobber
+        run: gh release upload v1.1.0 "release\PictoPlanning Setup 1.1.0.exe" --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

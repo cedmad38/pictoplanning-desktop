@@ -119,5 +119,5 @@ jobs:
           echo "Stapling : $DMG"
           xcrun stapler staple "$DMG"
           echo "Notarisation terminée ✓"
-          gh release upload v1.0.0 "$DMG" --clobber --repo ${{ github.repository }}
+          gh release upload v1.1.0 "$DMG" --clobber --repo ${{ github.repository }}
           echo "Upload terminé ✓"
