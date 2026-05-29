@@ -1,6 +1,6 @@
 {
   "name": "pictoplanning-desktop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "PictoPlanning By Cedmad — Logiciel PC de planning visuel par pictogrammes",
   "main": "electron/main.js",
   "scripts": {

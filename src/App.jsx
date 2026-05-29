@@ -7,7 +7,7 @@
  * Export  : impression native + sauvegarde JSON
  */
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
 /* ── ARASAAC ─────────────────────────────────────────────────────── */
 const ARASAAC_SEARCH = q =>
@@ -571,25 +571,47 @@ const initGrid = () => {
   return g
 }
 
+/* ── Sauvegarde automatique ──────────────────────────────────────── */
+const STORAGE_KEY = 'pictoplanning_autosave'
+
+const loadSaved = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  return null
+}
+
 /* ── App principale ──────────────────────────────────────────────── */
 export default function App() {
-  const [sz1Cm,  setSz1Cm]  = useState(4)
-  const [szNCm,  setSzNCm]  = useState(3)
-  const [fsCm,   setFsCm]   = useState(0.3)
-  const [labels,  setLabels]  = useState(true)
-  const [borders, setBorders] = useState(true)
-  const [bg,     setBg]     = useState('#FFFFFF')
-  const [child,  setChild]  = useState('Lucas')
+  const _saved = loadSaved()
+
+  const [sz1Cm,  setSz1Cm]  = useState(_saved?.sz1Cm  ?? 4)
+  const [szNCm,  setSzNCm]  = useState(_saved?.szNCm  ?? 3)
+  const [fsCm,   setFsCm]   = useState(_saved?.fsCm   ?? 0.3)
+  const [labels,  setLabels]  = useState(_saved?.labels  ?? true)
+  const [borders, setBorders] = useState(_saved?.borders ?? true)
+  const [bg,     setBg]     = useState(_saved?.bg     ?? '#FFFFFF')
+  const [child,  setChild]  = useState(_saved?.child  ?? 'Lucas')
   const [showLib,setShowLib]= useState(false)
   const [target, setTarget] = useState(null)
   const [clrFor, setClrFor] = useState(null)
   const dragSrc  = useRef(null)
   const [dragOvr,setDragOvr]= useState(null)
-  const [grids,  setGrids]  = useState([{ id:'g1', name:'Planning du matin', cells:initGrid() }])
-  const [gid,    setGid]    = useState('g1')
+  const [grids,  setGrids]  = useState(_saved?.grids ?? [{ id:'g1', name:'Planning du matin', cells:initGrid() }])
+  const [gid,    setGid]    = useState(_saved?.gid   ?? 'g1')
   const [rnmGrid,setRnmGrid]= useState(false)
   const [rnmVal, setRnmVal] = useState('')
   const [saveMsg,setSaveMsg]= useState(null)
+
+  /* Sauvegarde automatique à chaque changement */
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        child, grids, gid, sz1Cm, szNCm, fsCm, labels, borders, bg
+      }))
+    } catch {}
+  }, [child, grids, gid, sz1Cm, szNCm, fsCm, labels, borders, bg])
 
   const cur = grids.find(g => g.id === gid)
   const nR  = cur?.cells.length || 0
