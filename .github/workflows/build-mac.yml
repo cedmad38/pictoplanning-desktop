@@ -7,9 +7,11 @@ permissions:
   contents: write
 
 jobs:
-  build-mac:
+  build-and-submit:
     runs-on: macos-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
+    outputs:
+      submission_id: ${{ steps.submit.outputs.submission_id }}
     steps:
       - uses: actions/checkout@v4
 
@@ -28,7 +30,7 @@ jobs:
           security unlock-keychain -p "" build.keychain
           security import /tmp/cert.p12 -k build.keychain -P "$CSC_KEY_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-          # Télécharger le certificat intermédiaire Apple WWDR
+          # Certificat intermédiaire Apple Developer ID G2
           curl -s https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer -o /tmp/DeveloperIDG2CA.cer
           security import /tmp/DeveloperIDG2CA.cer -k build.keychain -T /usr/bin/codesign
           security find-identity -v -p codesigning build.keychain
@@ -36,31 +38,86 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build DMG (sans notarisation auto)
+      - name: Build DMG
         run: npm run build && npx electron-builder --mac --publish never
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           CSC_IDENTITY_AUTO_DISCOVERY: true
 
-      - name: Notariser avec xcrun notarytool
+      - name: Soumettre à la notarisation (sans attendre)
+        id: submit
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           DMG=$(ls release/*.dmg | head -1)
-          echo "Notarisation de : $DMG"
-          xcrun notarytool submit "$DMG" \
+          echo "Soumission de : $DMG"
+          RESULT=$(xcrun notarytool submit "$DMG" \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_APP_SPECIFIC_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
-            --wait \
-            --timeout 30m
-          xcrun stapler staple "$DMG"
-          echo "Notarisation terminée ✓"
+            --output-format json)
+          echo "$RESULT"
+          SUBMISSION_ID=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+          echo "submission_id=$SUBMISSION_ID" >> $GITHUB_OUTPUT
+          echo "Submission ID : $SUBMISSION_ID"
 
-      - name: Upload DMG vers la release
-        run: gh release upload v1.0.0 release/*.dmg --clobber
+      - name: Sauvegarder le DMG comme artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dmg-unsigned-notarisation
+          path: release/*.dmg
+          retention-days: 3
+
+  staple-and-upload:
+    runs-on: macos-latest
+    needs: build-and-submit
+    timeout-minutes: 50
+    steps:
+      - name: Attendre la validation Apple (poll toutes les 30s)
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          SUBMISSION_ID: ${{ needs.build-and-submit.outputs.submission_id }}
+        run: |
+          echo "Surveillance de la soumission : $SUBMISSION_ID"
+          for i in $(seq 1 80); do
+            STATUS=$(xcrun notarytool info "$SUBMISSION_ID" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" \
+              --output-format json | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])")
+            echo "[$i/80] Statut : $STATUS"
+            if [ "$STATUS" = "Accepted" ]; then
+              echo "Notarisation acceptée ✓"
+              break
+            elif [ "$STATUS" = "Invalid" ] || [ "$STATUS" = "Rejected" ]; then
+              echo "Notarisation refusée ✗"
+              exit 1
+            fi
+            sleep 30
+          done
+          if [ "$STATUS" != "Accepted" ]; then
+            echo "Timeout après 40 minutes"
+            exit 1
+          fi
+
+      - name: Télécharger le DMG
+        uses: actions/download-artifact@v4
+        with:
+          name: dmg-unsigned-notarisation
+          path: release/
+
+      - name: Stapler et uploader
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DMG=$(ls release/*.dmg | head -1)
+          echo "Stapling : $DMG"
+          xcrun stapler staple "$DMG"
+          echo "Notarisation terminée ✓"
+          gh release upload v1.0.0 "$DMG" --clobber --repo ${{ github.repository }}
+          echo "Upload terminé ✓"
