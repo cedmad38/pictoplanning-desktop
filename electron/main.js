@@ -1,8 +1,47 @@
 const { app, BrowserWindow, ipcMain, dialog, protocol, net } = require('electron')
 const path = require('path')
 const fs   = require('fs')
+const { autoUpdater } = require('electron-updater')
 
 const isDev = process.env.ELECTRON_DEV === 'true'
+
+/* ── Mises à jour automatiques ──────────────────────────────────── */
+function setupAutoUpdater(win) {
+  if (isDev) return
+
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('update-available', info => {
+    dialog.showMessageBox(win, {
+      type:    'info',
+      title:   'Mise à jour disponible',
+      message: `Une nouvelle version (v${info.version}) est disponible.`,
+      detail:  'Le téléchargement démarre en arrière-plan. Vous serez averti quand il sera prêt.',
+      buttons: ['OK'],
+    })
+  })
+
+  autoUpdater.on('update-downloaded', info => {
+    dialog.showMessageBox(win, {
+      type:    'info',
+      title:   'Mise à jour prête',
+      message: `PictoPlanning v${info.version} est prête à être installée.`,
+      detail:  'Cliquez sur "Redémarrer" pour appliquer la mise à jour maintenant.',
+      buttons: ['Redémarrer', 'Plus tard'],
+      defaultId: 0,
+    }).then(result => {
+      if (result.response === 0) autoUpdater.quitAndInstall()
+    })
+  })
+
+  autoUpdater.on('error', err => {
+    console.error('Erreur mise à jour :', err?.message)
+  })
+
+  // Vérifier 5 secondes après le démarrage (laisse le temps à la fenêtre de charger)
+  setTimeout(() => autoUpdater.checkForUpdates(), 5000)
+}
 
 /* ── Protocole local-file:// pour afficher les pictos locaux ────── */
 protocol.registerSchemesAsPrivileged([
@@ -29,6 +68,8 @@ function createWindow() {
   } else {
     win.loadFile(path.join(__dirname, '../dist/index.html'))
   }
+
+  return win
 }
 
 app.whenReady().then(() => {
@@ -52,7 +93,8 @@ app.whenReady().then(() => {
     }
   })
 
-  createWindow()
+  const win = createWindow()
+  setupAutoUpdater(win)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

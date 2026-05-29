@@ -64,11 +64,13 @@ jobs:
           echo "submission_id=$SUBMISSION_ID" >> $GITHUB_OUTPUT
           echo "Submission ID : $SUBMISSION_ID"
 
-      - name: Sauvegarder le DMG comme artefact
+      - name: Sauvegarder DMG + metadata comme artefact
         uses: actions/upload-artifact@v4
         with:
           name: dmg-unsigned-notarisation
-          path: release/*.dmg
+          path: |
+            release/*.dmg
+            release/latest-mac.yml
           retention-days: 3
 
   staple-and-upload:
@@ -116,8 +118,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           DMG=$(ls release/*.dmg | head -1)
+          VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "1.1.0")
+          TAG="v$VERSION"
           echo "Stapling : $DMG"
           xcrun stapler staple "$DMG"
           echo "Notarisation terminée ✓"
-          gh release upload v1.1.0 "$DMG" --clobber --repo ${{ github.repository }}
+          gh release upload "$TAG" "$DMG" --clobber --repo ${{ github.repository }}
+          gh release upload "$TAG" release/latest-mac.yml --clobber --repo ${{ github.repository }}
           echo "Upload terminé ✓"
