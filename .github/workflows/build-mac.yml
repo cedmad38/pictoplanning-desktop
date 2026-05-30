@@ -78,6 +78,8 @@ jobs:
     needs: build-and-submit
     timeout-minutes: 50
     steps:
+      - uses: actions/checkout@v4
+
       - name: Attendre la validation Apple (poll toutes les 30s)
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
