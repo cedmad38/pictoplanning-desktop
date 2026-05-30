@@ -37,6 +37,13 @@ function setupAutoUpdater(win) {
 
   autoUpdater.on('error', err => {
     console.error('Erreur mise à jour :', err?.message)
+    dialog.showMessageBox(win, {
+      type:    'warning',
+      title:   'Erreur de mise à jour',
+      message: 'La mise à jour a échoué.',
+      detail:  err?.message || 'Erreur inconnue. Vous pouvez télécharger la mise à jour manuellement sur github.com/cedmad38/pictoplanning-desktop',
+      buttons: ['OK'],
+    })
   })
 
   // Vérifier 5 secondes après le démarrage (laisse le temps à la fenêtre de charger)
